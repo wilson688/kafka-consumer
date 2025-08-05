@@ -1,0 +1,15 @@
+spring:
+  jpa:
+    defer-datasource-initialization: false
+    hibernate:
+      ddl-auto: none
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  datasource:
+    url: jdbc:postgresql://localhost:5432/test?user=test&password=secret
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: my-group
+      auto-offset-reset: earliest

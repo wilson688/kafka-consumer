@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  liquibase:
+    image: liquibase/liquibase:latest # Use the official Liquibase Docker image
+    container_name: liquibase_migration
+    volumes:
+      - ./src/main/resources/db/changelog:/liquibase/changelog # Mount the changelog directory
+    command: liquibase update --url=jdbc:postgresql://postgres:5432/test --classpath=/liquibase/changelog --changelog-file=db.changelog-master.yaml --username=test --password=secret # Run Liquibase update command with database connection details.
+    environment:
+      - LIQUIBASE_COMMAND_WAIT_FOR_LOCK=true # Prevents simultaneous Liquibase operations
+      - LIQUIBASE_COMMAND_WAIT_FOR_LOCK_TIMEOUT=300000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT_INTERNAL://0.0.0.0:29092,PLAINTEXT_EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://localhost:9092 # Adjust localhost if needed for host.docker.internal
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    healthcheck:
+      test: [ "CMD-SHELL", "echo 'health-check-message' | kafka-console-producer.sh --broker-list kafka:29092 --topic health-check-topic && kafka-console-consumer.sh --bootstrap-server kafka:29092 --topic health-check-topic --from-beginning --max-messages 1 | grep 'health-check-message'" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s # Give the producer time to start up before health checks begin
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: test
+      POSTGRES_USER: test
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
