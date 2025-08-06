@@ -1,7 +1,30 @@
 package com.wilson.kafka_consumer.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
+@Entity
+@Table
 public class Person {
+
+    @Id
+    @JsonProperty("id")
+    private int id;
+
+    @JsonProperty("first_name")
+    private String first_name;
+
+    @JsonProperty("last_name")
+    private String last_name;
+
+    public Person() {
+
+    }
+
     public int getId() {
         return id;
     }
@@ -25,8 +48,4 @@ public class Person {
     public void setLast_name(String last_name) {
         this.last_name = last_name;
     }
-
-    int id;
-    String first_name;
-    String last_name;
 }

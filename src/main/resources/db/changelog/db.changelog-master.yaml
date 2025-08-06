@@ -2,6 +2,10 @@ databaseChangeLog:
   - changeSet:
       id: 1
       author: wilson
+      preConditions:
+        - onFail: MARK_RAN # or CONTINUE
+          tableExists:
+            tableName: person
       changes:
         - createTable:
             tableName: person
@@ -26,6 +30,12 @@ databaseChangeLog:
   - changeSet:
       id: 2
       author: wilson
+      preConditions:
+        - onFail: MARK_RAN # or CONTINUE
+          not:
+            rowExists:
+              tableName: person
+              where: "first_name = 'sowmya'"
       changes:
         - insert:
             tableName: person

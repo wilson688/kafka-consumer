@@ -1,14 +1,27 @@
 package com.wilson.kafka_consumer.model.converter;
 
 
+import com.wilson.kafka_consumer.TestTopicConsumer;
 import com.wilson.kafka_consumer.model.Person;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Component
 public class DataConverter {
+
+    private static final Logger log = LoggerFactory.getLogger(TestTopicConsumer.class);
+
+    private final ObjectMapper objectMapper; // Jackson ObjectMapper for JSON processing
+
+    public DataConverter(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
 
     public Person convertData(String payload)
     {
@@ -20,21 +33,28 @@ public class DataConverter {
         return person;
     }
 
+
     public Map<String, String> convertToMap(String payload)
     {
-        String[] keyValuePairs = payload.split(",");
+        String cleaned = payload
+                .substring(1, payload.length() - 1)      // removes the outer { }
+                .replaceAll("\\\\\"", "\"");         // un‐escapes inner quotes
+
+        String[] keyValuePairs = cleaned.split(",");
         Map<String, String> resultMap = new HashMap<>();
 
         for (String pair : keyValuePairs)
         {
-            String[] entry = pair.split("=");
+            String[] entry = pair.split(":");
             if (entry.length == 2)
             {
-                resultMap.put(entry[0].trim(), entry[1].trim());
+                String key = entry[0].trim().replaceAll("^\"|\"$", "");
+                String val = entry[1].trim().replaceAll("^\"|\"$", "");
+                resultMap.put(key, val);
             }
             else
             {
-                System.out.println("Malformed key-value pair: " + pair);
+                log.info("Malformed key-value pair: " + pair);
             }
         }
         return resultMap;

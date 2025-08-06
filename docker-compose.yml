@@ -29,11 +29,11 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENERS: PLAINTEXT_INTERNAL://0.0.0.0:29092,PLAINTEXT_EXTERNAL://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://localhost:9092 # Adjust localhost if needed for host.docker.internal
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_INTERNAL://kafka:29092,PLAINTEXT_EXTERNAL://host.docker.internal:9092 # Adjust localhost if needed for host.docker.internal
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT_INTERNAL:PLAINTEXT,PLAINTEXT_EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     healthcheck:
       test: [ "CMD-SHELL", "echo 'health-check-message' | kafka-console-producer.sh --broker-list kafka:29092 --topic health-check-topic && kafka-console-consumer.sh --bootstrap-server kafka:29092 --topic health-check-topic --from-beginning --max-messages 1 | grep 'health-check-message'" ]
       interval: 30s
@@ -54,3 +54,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Add this new service for your Spring Boot app
+  app:
+    build:
+      context: . # Assumes your Spring Boot project is in the same directory as docker-compose.yml
+      dockerfile: Dockerfile # Points to your application's Dockerfile
+    ports:
+      - "8080:8080" # Expose the application's port if needed
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/test # Example database URL
+      SPRING_DATASOURCE_USERNAME: test
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092 # Connect to the internal Kafka listener
+    depends_on:
+      postgres:
+        condition: service_healthy
